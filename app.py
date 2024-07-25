@@ -12,7 +12,7 @@ from datetime import datetime
 from urllib.parse import urlparse, parse_qs
 
 app = Flask(__name__)
-app.secret_key = 'AIzaSyAcgvFEG2hJSRLhqpa8ocMTmxq4Og7Fcnw'  # Replace with your actual secret key
+app.secret_key = os.getenv('FLASK_SECRET_KEY')  # Replace with your actual secret key
 
 # Variables and configurations
 url_list = []
@@ -21,7 +21,7 @@ thumbnail_list = []
 export_states = {}
 
 # Replace with your own YouTube Data API key
-YOUTUBE_API_KEY = 'AIzaSyAcgvFEG2hJSRLhqpa8ocMTmxq4Og7Fcnw'
+YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
 youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
 
 def setup_logging():
@@ -293,4 +293,4 @@ def check_updates():
     return jsonify({"update_available": False})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
