@@ -212,10 +212,6 @@ def load_playlist():
         flash("Invalid playlist URL")
         return jsonify({"message": "Invalid playlist URL"}), 400
 
-    url_list = []
-    name_list = []
-    thumbnail_list = []
-
     try:
         # Initialize the request
         playlist_request = youtube.playlistItems().list(
@@ -255,10 +251,6 @@ def load_playlist():
 def load_urls():
     global url_list, name_list, thumbnail_list
     urls = request.form.get("urls").strip().split('\n')
-
-    url_list = []
-    name_list = []
-    thumbnail_list = []
 
     async def process_url(url, session):
         if url.strip():
