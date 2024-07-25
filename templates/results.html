@@ -6,29 +6,32 @@
     <title>Conversion Results</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script>
-        let progressId = "{{ progress_id }}";  // Get progress ID from the URL
+        let progressId = "{{ progress_id }}";
 
         function checkProgress() {
             fetch(`/progress/${progressId}`)
             .then(response => response.json())
             .then(data => {
-                console.log('Progress Data:', data);  // Log the progress data
-                
+                console.log('Progress Data:', data);
+
                 const progressBar = document.getElementById('progress-bar');
                 const downloadButton = document.getElementById('download-button');
-        
+
                 if (progressBar) {
                     progressBar.style.width = data.progress + '%';
                     progressBar.innerText = data.progress + '%';
+                    if (data.progress === 100) {
+                        progressBar.classList.add('complete');
+                    }
                 }
-        
+
                 if (downloadButton) {
                     if (data.progress < 100) {
-                        setTimeout(checkProgress, 500);  // Check progress every 500ms
+                        setTimeout(checkProgress, 500);
                     } else {
-                        downloadButton.style.display = 'block';  // Show button when progress is 100%
-                        downloadButton.classList.add('show');  // Add a class to ensure visibility
-                        console.log('Button displayed:', downloadButton.style.display);  // Debugging log
+                        downloadButton.style.display = 'block';
+                        downloadButton.classList.add('show');
+                        console.log('Button displayed:', downloadButton.style.display);
                     }
                 }
             })
@@ -36,7 +39,7 @@
                 console.error('Error fetching progress:', error);
             });
         }
-        
+
         window.onload = function() {
             checkProgress();
         };
@@ -47,14 +50,14 @@
         <h1>Conversion Results</h1>
     </header>
     <main>
-        <div id="progress-container" style="width: 100%; background: #f3f3f3; border: 1px solid #ccc; height: 20px; margin: 20px 0;">
-            <div id="progress-bar" style="width: 0%; height: 100%; background: green; text-align: center; color: white;">0%</div>
+        <div id="progress-container">
+            <div id="progress-bar">0%</div>
         </div>
-        <button id="download-button" style="display: none;" onclick="window.location.href='{{ url_for('download_file', filename=progress_id + '.txt') }}'">Download File</button>
+        <button id="download-button" onclick="window.location.href='{{ url_for('download_file', filename=progress_id + '.txt') }}'">Download File</button>
         <a href="{{ url_for('index') }}">Go Back</a>
     </main>
     <footer>
-        <p>ProTV Convertor - Export your playlist data to ProTV</p>
+        <p>ProTV Convertor - Build ProTV playlists with ease</p>
     </footer>
 </body>
 </html>
