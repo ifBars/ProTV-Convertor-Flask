@@ -46,6 +46,7 @@ textarea, input[type="text"], input[type="submit"], button {
     border-radius: 4px;
     font-size: 1rem;
     margin-top: 0.5rem;
+    box-sizing: border-box;
 }
 
 textarea {
