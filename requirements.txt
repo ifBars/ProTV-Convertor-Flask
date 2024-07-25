@@ -2,3 +2,5 @@ Flask==3.0.3
 Werkzeug==3.0.3
 google-api-python-client==2.137.0
 aiofiles==24.1.0
+urllib3==2.2.1
+gunicorn==22.0.0
