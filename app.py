@@ -95,7 +95,7 @@ async def async_export(file_path, url_list, name_list, download_thumbnails, url_
 
         for i, url in enumerate(url_list):
             prefixed_url = f"{url_prefix}{url}" if url_prefix else url
-            await file.write(f"@{prefixed_url}\n{name_list[i]}\n\n")
+            await file.write(f"@{prefixed_url}\n~{name_list[i]}\n\n")
             if download_thumbnails and "youtube.com" in url:
                 await file.write(f"{thumbnail_list[i]}\n")
             export_states[progress_id]['export_progress'] = 100 * (i + 1) / len(url_list)
