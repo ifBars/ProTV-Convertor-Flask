@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProTV Convertor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        function showAlert(message) {
+            alert(message);
+        }
+
+        function handleFormSubmission(event, url) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+
+            fetch(url, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    showAlert(data.message);
+                } else {
+                    location.reload();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <h1>ProTV Convertor</h1>
+    </header>
+    <main>
+        <form id="playlist-form" method="post" onsubmit="handleFormSubmission(event, '{{ url_for('load_playlist') }}')">
+            <div class="form-group">
+                <label for="playlist_url">Enter YouTube Playlist URL:</label>
+                <input type="text" name="playlist_url" placeholder="Enter Playlist URL or ID" required>
+                <input type="submit" value="Load Playlist">
+            </div>
+        </form>
+
+        <form id="urls-form" method="post" onsubmit="handleFormSubmission(event, '{{ url_for('load_urls') }}')">
+            <div class="form-group">
+                <label for="urls">Enter Video/YouTube URLs:</label>
+                <textarea id="urls" name="urls" placeholder="Enter each URL on a new line" required></textarea>
+                <input type="submit" value="Load URLs">
+            </div>
+        </form>
+
+        <form method="post" action="{{ url_for('export_data') }}">
+            <div class="form-group">
+                <label for="prefix">Optional URL Prefix:</label>
+                <input type="text" id="prefix" name="prefix" placeholder="e.g., https://example.com/?url=">
+            </div>
+            <input type="submit" value="Convert">
+        </form>        
+
+        <button onclick="clearLinks()">Clear Links</button>
+
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="{{ message.category }}">{{ message.message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </main>
+    <footer>
+        <p>ProTV Convertor - Convert URLs for ProTV playlists</p>
+    </footer>
+
+    <script>
+        function clearLinks() {
+            if (confirm('Are you sure you want to clear all links?')) {
+                fetch('{{ url_for('clear_links') }}', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message) {
+                        showAlert(data.message);
+                        location.reload();
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        }
+    </script>
+</body>
+</html>
