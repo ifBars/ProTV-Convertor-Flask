@@ -242,10 +242,10 @@ def load_playlist():
                 pageToken=response.get('nextPageToken')
             ) if response.get('nextPageToken') else None
 
-        return jsonify({"message": f"Loaded {len(url_list)} videos from playlist"})
+        return jsonify({"message": f"Loaded {len(url_list)} videos from playlist", "success": True})
     except Exception as e:
         logging.error(f"Error loading playlist: {e}")
-        return jsonify({"message": "Error loading playlist"}), 500
+        return jsonify({"message": "Error loading playlist", "success": False}), 500
 
 @app.route('/load_urls', methods=['POST'])
 def load_urls():
@@ -266,7 +266,11 @@ def load_urls():
     asyncio.set_event_loop(loop)
     loop.run_until_complete(run_process())
 
-    return jsonify({"message": f"Loaded {len(url_list)} URLs"})
+    return jsonify({"message": f"Loaded {len(url_list)} URLs", "success": True})
+
+@app.route('/url_count', methods=['GET'])
+def get_url_count():
+    return jsonify({'count': len(url_list)})
 
 @app.route('/download/<filename>', methods=['GET'])
 def download_file(filename):

@@ -14,7 +14,7 @@
             event.preventDefault();
             const form = event.target;
             const formData = new FormData(form);
-
+    
             fetch(url, {
                 method: 'POST',
                 body: formData
@@ -23,12 +23,26 @@
             .then(data => {
                 if (data.message) {
                     showAlert(data.message);
-                } else {
-                    location.reload();
+                    if (data.success) {
+                        updateUrlCount(); // Update the URL count if the addition is successful
+                    }
                 }
             })
             .catch(error => console.error('Error:', error));
         }
+    
+        function updateUrlCount() {
+            fetch('/url_count')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('url-count').textContent = `Urls: ${data.count}`;
+                })
+                .catch(error => console.error('Error fetching URL count:', error));
+        }
+    
+        document.addEventListener('DOMContentLoaded', () => {
+            updateUrlCount(); // Update on page load
+        });
     </script>
 </head>
 <body>
@@ -36,6 +50,7 @@
         <h1>ProTV Convertor</h1>
     </header>
     <main>
+        <div id="url-count">Urls: {{ url_count }}</div>
         <form id="playlist-form" method="post" onsubmit="handleFormSubmission(event, '{{ url_for('load_playlist') }}')">
             <div class="form-group">
                 <label for="playlist_url">Enter YouTube Playlist URL:</label>
@@ -82,7 +97,7 @@
                 .then(data => {
                     if (data.message) {
                         showAlert(data.message);
-                        location.reload();
+                        updateUrlCount();
                     }
                 })
                 .catch(error => console.error('Error:', error));
