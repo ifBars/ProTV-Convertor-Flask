@@ -5,6 +5,7 @@ body {
     background-color: #f4f4f9;
     color: #333;
     line-height: 1.6;
+    overflow-x: hidden;
 }
 
 header, footer {
@@ -27,7 +28,10 @@ main {
     background-color: #ffffff;
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    position: relative; /* Add this line */
+    position: relative;
+    opacity: 0;
+    transform: translateY(-20px);
+    animation: fadeIn 1s ease forwards, slideIn 1s ease 0.2s forwards;
 }
 
 .help-icon {
@@ -44,7 +48,7 @@ main {
     justify-content: center;
     cursor: pointer;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    z-index: 1000; /* Ensure the icon is above other content */
+    z-index: 1000;
 }
 
 .help-icon:hover {
@@ -154,4 +158,22 @@ button {
 
 button:hover {
     background-color: #0056b3;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-20px);
+    }
+    to {
+        transform: translateY(0);
+    }
 }
