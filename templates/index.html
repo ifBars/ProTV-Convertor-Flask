@@ -24,7 +24,7 @@
                 if (data.message) {
                     showAlert(data.message);
                     if (data.success) {
-                        updateUrlCount(); // Update the URL count if the addition is successful
+                        updateUrlCount();
                     }
                 }
             })
@@ -51,6 +51,9 @@
     </header>
     <main>
         <div id="url-count">Urls: {{ url_count }}</div>
+        <div class="help-icon" onclick="window.location.href='https://github.com/ifBars/VRChat-ProTVConvertor/wiki';">
+            ?
+        </div>
         <form id="playlist-form" method="post" onsubmit="handleFormSubmission(event, '{{ url_for('load_playlist') }}')">
             <div class="form-group">
                 <label for="playlist_url">Enter YouTube Playlist URL:</label>
@@ -70,7 +73,7 @@
         <form method="post" action="{{ url_for('export_data') }}">
             <div class="form-group">
                 <label for="prefix">Optional URL Prefix:</label>
-                <input type="text" id="prefix" name="prefix" placeholder="e.g., https://example.com/?url=">
+                <input type="text" id="prefix" name="prefix" placeholder="e.g., https://nextnex.com/?url=">
             </div>
             <input type="submit" value="Convert">
         </form>        

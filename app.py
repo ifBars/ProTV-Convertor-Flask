@@ -217,7 +217,7 @@ def load_playlist():
         playlist_request = youtube.playlistItems().list(
             part='snippet',
             playlistId=playlist_id,
-            maxResults=50
+            maxResults=1000
         )
 
         while playlist_request is not None:
