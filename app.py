@@ -181,6 +181,12 @@ def is_valid_url(url):
 
 @app.route('/')
 def index():
+    if 'url_list' not in session:
+        session['url_list'] = []
+    if 'name_list' not in session:
+        session['name_list'] = []
+    if 'thumbnail_list' not in session:
+        session['thumbnail_list'] = []
     return render_template('index.html')
 
 @app.route('/download_thumbnail', methods=['POST'])
@@ -218,14 +224,15 @@ def load_playlist():
         return jsonify({"message": "Invalid playlist URL"}), 400
 
     try:
-        url_list = []
-        name_list = []
-        thumbnail_list = []
-
+        url_list = session.get('url_list', [])
+        name_list = session.get('name_list', [])
+        #thumbnail_list = session.get('thumbnail_list', [])
+        initial_count = len(url_list)
+            
         playlist_request = youtube.playlistItems().list(
             part='snippet',
             playlistId=playlist_id,
-            maxResults=1000
+            maxResults=100
         )
 
         while playlist_request is not None:
@@ -234,24 +241,25 @@ def load_playlist():
                 video_id = item['snippet']['resourceId']['videoId']
                 video_url = f"https://www.youtube.com/watch?v={video_id}"
                 video_title = item['snippet']['title']
-                thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
+                #thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
 
                 url_list.append(video_url)
                 name_list.append(video_title)
-                thumbnail_list.append(thumbnail_url)
+                #thumbnail_list.append(thumbnail_url)
 
             playlist_request = youtube.playlistItems().list(
                 part='snippet',
                 playlistId=playlist_id,
-                maxResults=50,
+                maxResults=100,
                 pageToken=response.get('nextPageToken')
             ) if response.get('nextPageToken') else None
 
         session['url_list'] = url_list
         session['name_list'] = name_list
-        session['thumbnail_list'] = thumbnail_list
+        #session['thumbnail_list'] = thumbnail_list
+        new_count = len(url_list) - initial_count
 
-        return jsonify({"message": f"Loaded {len(url_list)} videos from playlist", "success": True})
+        return jsonify({"message": f"Loaded {new_count} videos from playlist", "success": True})
     except Exception as e:
         logging.error(f"Error loading playlist: {e}")
         return jsonify({"message": "Error loading playlist", "success": False}), 500
@@ -259,22 +267,30 @@ def load_playlist():
 @app.route('/load_urls', methods=['POST'])
 def load_urls():
     urls = request.form.get("urls").strip().split('\n')
+    initial_count = len(session.get('url_list', []))
 
-    async def process_url(url, session):
+    async def process_url(url, aiohttp_session):
         if url.strip():
-            session['url_list'].append(url)
-            session['name_list'].append(get_video_name(url))
-            session['thumbnail_list'].append(await get_video_thumbnail(session, url))
+            url_list = session.get('url_list', [])
+            name_list = session.get('name_list', [])
+            #thumbnail_list = session.get('thumbnail_list', [])
+
+            url_list.append(url)
+            name_list.append(get_video_name(url))
+            #thumbnail_list.append(await get_video_thumbnail(aiohttp_session, url))
+
+            session['url_list'] = url_list
+            session['name_list'] = name_list
+            #session['thumbnail_list'] = thumbnail_list
 
     async def run_process():
-        async with aiohttp.ClientSession() as session:
-            await asyncio.gather(*(process_url(url, session) for url in urls))
+        async with aiohttp.ClientSession() as aiohttp_session:
+            await asyncio.gather(*(process_url(url, aiohttp_session) for url in urls))
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(run_process())
+    asyncio.run(run_process())
+    new_count = len(session.get('url_list', [])) - initial_count
 
-    return jsonify({"message": f"Loaded {len(session['url_list'])} URLs", "success": True})
+    return jsonify({"message": f"Loaded {new_count} URLs", "success": True})
 
 @app.route('/url_count', methods=['GET'])
 def get_url_count():
