@@ -60,15 +60,24 @@ def get_playlist_id(entry):
     return playlist_id
 
 def get_video_name(url):
-    try:
-        video_id = re.search(r'v=([^&]+)', url).group(1)
-        return get_video_info(video_id)
-    except AttributeError:
-        logging.error(f"Failed to extract video ID from URL: {url}")
-        return "Invalid URL"
-    except Exception as e:
-        logging.error(f"Error retrieving video name: {e}")
-        return "API Error"
+    if 'youtube.com' in url or 'youtu.be' in url:
+        try:
+            video_id_match = re.search(r'v=([^&]+)', url)
+            if not video_id_match:
+                # Handle shortened URLs (e.g., youtu.be/VIDEO_ID)
+                video_id_match = re.search(r'youtu.be/([^?&]+)', url)
+            
+            if video_id_match:
+                video_id = video_id_match.group(1)
+                return get_video_info(video_id)
+            else:
+                logging.error(f"Failed to extract video ID from URL: {url}")
+                return "Invalid URL"
+        except Exception as e:
+            logging.error(f"Error retrieving video name: {e}")
+            return "API Error"
+    else:
+        return "HTTP Video"
 
 async def get_video_thumbnail(session: aiohttp.ClientSession, url: str) -> str:
     video_id = re.search(r'v=([^&]+)', url).group(1)
