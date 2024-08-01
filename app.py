@@ -88,25 +88,32 @@ async def download_thumbnail(url: str, folder_path: str, session: aiohttp.Client
 
 async def async_export(file_path, url_list, name_list, download_thumbnails, url_prefix, progress_id):
     logging.debug("Starting export to file")
-    async with aiofiles.open(file_path, mode='w', encoding='utf-8') as file:
-        #async with aiohttp.ClientSession() as session:
-            #if download_thumbnails:
-                #tasks = [download_thumbnail(url, 'static/thumbnails', session) for url in url_list if "youtube.com" in url]
-                #await asyncio.gather(*tasks)
-                #logging.debug(f"Thumbnail download progress: {export_states[progress_id]['export_progress']}%")
-
-        for i, url in enumerate(url_list):
-            prefixed_url = f"{url_prefix}{url}" if url_prefix else url
-            await file.write(f"@{prefixed_url}\n~{name_list[i]}\n\n")
-            #if download_thumbnails and "youtube.com" in url:
-                #await file.write(f"{thumbnail_list[i]}\n")
-            export_states[progress_id]['export_progress'] = 100 * (i + 1) / len(url_list)
-            logging.debug(f"Export progress: {export_states[progress_id]['export_progress']}%")
-            await asyncio.sleep(0)
-
-    logging.debug(f"Export complete. File saved to {file_path}")
-    export_states[progress_id]['export_progress'] = 100
-    export_states[progress_id]['exporting'] = False
+    try:
+        async with aiofiles.open(file_path, mode='w', encoding='utf-8') as file:
+            #async with aiohttp.ClientSession() as session:
+                #if download_thumbnails:
+                    #tasks = [download_thumbnail(url, 'static/thumbnails', session) for url in url_list if "youtube.com" in url]
+                    #await asyncio.gather(*tasks)
+                    #logging.debug(f"Thumbnail download progress: {export_states[progress_id]['export_progress']}%")
+                
+            for i, url in enumerate(url_list):
+                prefixed_url = f"{url_prefix}{url}" if url_prefix else url
+                await file.write(f"@{prefixed_url}\n~{name_list[i]}\n\n")
+                export_states[progress_id]['export_progress'] = 100 * (i + 1) / len(url_list)
+                logging.debug(f"Export progress: {export_states[progress_id]['export_progress']}%")
+                await asyncio.sleep(0)
+        
+        logging.debug(f"Export complete. File saved to {file_path}")
+        export_states[progress_id]['export_progress'] = 100
+        export_states[progress_id]['exporting'] = False
+        export_states[progress_id]['status'] = 'success'
+    except Exception as e:
+        logging.error(f"Export failed: {e}")
+        export_states[progress_id]['status'] = 'error'
+        export_states[progress_id]['error_message'] = str(e)
+        export_states[progress_id]['export_progress'] = 0
+    finally:
+        export_states[progress_id]['exporting'] = False
     return file_path
 
 @app.route('/export', methods=['POST'])
@@ -152,6 +159,8 @@ def export_data():
             export_states[progress_id]['file_path'] = file_path
         except Exception as e:
             logging.error(f"Export failed: {e}")
+            export_states[progress_id]['status'] = 'error'
+            export_states[progress_id]['error_message'] = str(e)
         finally:
             export_states[progress_id]['exporting'] = False
 
@@ -168,9 +177,12 @@ def results():
 def check_progress(progress_id):
     state = export_states.get(progress_id, {})
     progress = state.get('export_progress', 0)
+    status = state.get('status', 'in-progress')
+    error_message = state.get('error_message', '')
+
     if state.get('exporting', False):
-        return jsonify({"progress": progress})
-    return jsonify({"progress": 100})
+        return jsonify({"progress": progress, "status": status, "error_message": error_message})
+    return jsonify({"progress": 100, "status": status, "error_message": error_message})
 
 def is_valid_youtube_url(url):
     return 'youtube.com/watch' in url

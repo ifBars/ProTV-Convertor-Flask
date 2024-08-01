@@ -16,6 +16,7 @@
 
                 const progressBar = document.getElementById('progress-bar');
                 const downloadButton = document.getElementById('download-button');
+                const statusMessage = document.getElementById('status-message');
 
                 if (progressBar) {
                     progressBar.style.width = data.progress + '%';
@@ -25,13 +26,22 @@
                     }
                 }
 
+                if (statusMessage) {
+                    if (data.status === 'error') {
+                        statusMessage.innerText = `Export failed: ${data.error_message}`;
+                        statusMessage.classList.add('error');
+                    } else if (data.status === 'success') {
+                        statusMessage.innerText = 'Export completed successfully!';
+                        statusMessage.classList.add('success');
+                    }
+                }
+
                 if (downloadButton) {
                     if (data.progress < 100) {
                         setTimeout(checkProgress, 500);
                     } else {
                         downloadButton.style.display = 'block';
                         downloadButton.classList.add('show');
-                        console.log('Button displayed:', downloadButton.style.display);
                     }
                 }
             })
@@ -50,6 +60,7 @@
         <h1>Conversion Results</h1>
     </header>
     <main>
+        <div id="status-message"></div>
         <div id="progress-container">
             <div id="progress-bar">0%</div>
         </div>
