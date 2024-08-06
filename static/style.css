@@ -66,6 +66,7 @@ main {
 }
 
 textarea, input[type="text"], input[type="submit"], button {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     width: 100%;
     padding: 0.75rem;
     border: 1px solid #ccc;
