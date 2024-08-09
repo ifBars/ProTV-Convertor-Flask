@@ -184,8 +184,8 @@ def results():
 
 @app.route('/progress/<progress_id>', methods=['GET'])
 def check_progress(progress_id):
-    state = export_states.get(progress_id, {})
-    
+    state = export_states.get(progress_id)
+
     if state is None:
         return jsonify({"progress": 0, "status": "error", "error_message": "Invalid or Expired ID"})
 
@@ -195,7 +195,8 @@ def check_progress(progress_id):
 
     if state.get('exporting', False):
         return jsonify({"progress": progress, "status": status, "error_message": error_message})
-    return jsonify({"progress": 100, "status": status, "error_message": error_message})
+    else:
+        return jsonify({"progress": 100, "status": status, "error_message": error_message})
 
 def is_valid_youtube_url(url):
     return 'youtube.com/watch' in url
