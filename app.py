@@ -1,6 +1,3 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, jsonify, session
-from flask_session import Session
-from googleapiclient.discovery import build
 import asyncio
 import aiofiles
 import aiohttp
@@ -9,8 +6,10 @@ import uuid
 import re
 import logging
 import threading
-from datetime import datetime
 from urllib.parse import urlparse, parse_qs
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, jsonify, session
+from flask_session import Session
+from googleapiclient.discovery import build
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY')
@@ -219,7 +218,7 @@ def index():
 def download_thumbnail_route():
     url = request.form.get('url')
     if is_valid_youtube_url(url):
-        video_id = re.search(r'v=([^&]+)', url).group(1)
+        #video_id = re.search(r'v=([^&]+)', url).group(1)
         download_path = 'static/thumbnails'
         os.makedirs(download_path, exist_ok=True)
         async def run_download():
@@ -328,7 +327,7 @@ def download_file(filename):
     if os.path.exists(file_path):
         return send_file(file_path, as_attachment=True)
     else:
-        return jsonify({"message": "File not found"}), 404
+        return jsonify({"message": "File not found"})
 
 @app.route('/check_updates', methods=['GET'])
 def check_updates():
