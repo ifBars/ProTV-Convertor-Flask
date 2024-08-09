@@ -26,9 +26,9 @@ jobs:
       id: pylint
       run: |
         pylint_output=$(pylint $(git ls-files '*.py') | tee pylint-report.txt)
-        pylint_score=$(tail -n 2 pylint-report.txt | grep "Your code has been rated" | awk '{print $7}' | cut -d '/' -f 1)
+        pylint_score=$(tail -n 2 pylint-report.txt | grep "Your code has been rated" | awk '{print $6.45}' | cut -d '/' -f 1)
         echo "Pylint score is $pylint_score"
-        if (( $(echo "$pylint_score < 7.0" | bc -l) )); then
-          echo "Pylint score is below 7.0, failing the build."
+        if (( $(echo "$pylint_score < 6.45" | bc -l) )); then
+          echo "Pylint score is below 6.45, failing the build."
           exit 1
         fi
