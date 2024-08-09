@@ -185,6 +185,10 @@ def results():
 @app.route('/progress/<progress_id>', methods=['GET'])
 def check_progress(progress_id):
     state = export_states.get(progress_id, {})
+    
+    if state is None:
+        return jsonify({"progress": 0, "status": "error", "error_message": "Invalid or Expired ID"})
+
     progress = state.get('export_progress', 0)
     status = state.get('status', 'in-progress')
     error_message = state.get('error_message', '')
