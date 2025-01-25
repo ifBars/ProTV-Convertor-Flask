@@ -4,6 +4,7 @@ import aiohttp
 import os
 import uuid
 import re
+import sys
 import logging
 import threading
 from urllib.parse import urlparse, parse_qs
