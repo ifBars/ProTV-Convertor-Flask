@@ -1,2 +1,4 @@
+set FLASK_SECRET_KEY=AIzaSyAcgvFEG2hJSRLhqpa8ocMTmxq4Og7Fcnw
+set YOUTUBE_API_KEY=AIzaSyAcgvFEG2hJSRLhqpa8ocMTmxq4Og7Fcnw
 python app.py
 pause

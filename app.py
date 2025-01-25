@@ -11,6 +11,7 @@ from urllib.parse import urlparse, parse_qs
 from flask import Flask, render_template, request, redirect, url_for, flash, send_file, jsonify, session
 from flask_session import Session
 from googleapiclient.discovery import build
+from io import BytesIO
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY')  # Secure key for signing cookies
@@ -114,7 +115,6 @@ async def async_export(file_path, url_list, name_list, url_prefix, progress_id):
 def export_data():
     progress_id = str(uuid.uuid4())
     data = request.form
-    file_name = progress_id
     url_prefix = data.get("prefix", "")
 
     if 'url_list' not in session or 'name_list' not in session:
@@ -126,25 +126,26 @@ def export_data():
     export_states[progress_id] = {
         'exporting': True,
         'export_progress': 0,
-        'file_path': f"/tmp/{file_name}.txt",  # Temporary path
         'url_prefix': url_prefix
     }
 
-    def run_export():
-        try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(async_export(
-                export_states[progress_id]['file_path'],
-                url_list,
-                name_list,
-                export_states[progress_id]['url_prefix'],
-                progress_id
-            ))
-        except Exception as e:
-            logging.error(f"Export failed: {e}")
+    # Generate file content in memory
+    output = BytesIO()
+    try:
+        for i, url in enumerate(url_list):
+            prefixed_url = f"{url_prefix}{url}" if url_prefix else url
+            output.write(f"@{prefixed_url}\n~{name_list[i]}\n\n".encode('utf-8'))
+            export_states[progress_id]['export_progress'] = 100 * (i + 1) / len(url_list)
+        
+        output.seek(0)  # Reset cursor to the beginning
+        session[f'file_{progress_id}'] = output.read()  # Store file content in session
+        export_states[progress_id]['status'] = 'success'
+    except Exception as e:
+        logging.error(f"Export failed: {e}")
+        export_states[progress_id]['status'] = 'error'
+    finally:
+        export_states[progress_id]['exporting'] = False
 
-    threading.Thread(target=run_export).start()
     return redirect(url_for('results', progress_id=progress_id))
 
 @app.route('/results', methods=['GET'])
@@ -288,13 +289,19 @@ def load_urls():
 def get_url_count():
     return jsonify({'count': len(session.get('url_list', []))})
 
-@app.route('/download/<filename>', methods=['GET'])
-def download_file(filename):
-    file_path = os.path.join('.', filename)
-    if os.path.exists(file_path):
-        return send_file(file_path, as_attachment=True)
+@app.route('/download/<progress_id>', methods=['GET'])
+def download_file(progress_id):
+    file_key = f'file_{progress_id}'
+    if file_key in session:
+        file_content = session[file_key]
+        return send_file(
+            BytesIO(file_content),
+            mimetype='text/plain',
+            as_attachment=True,
+            download_name=f'export_{progress_id}.txt'
+        )
     else:
-        return jsonify({"message": "File not found"})
+        return jsonify({"message": "File not found or expired"}), 404
 
 @app.route('/check_updates', methods=['GET'])
 def check_updates():
