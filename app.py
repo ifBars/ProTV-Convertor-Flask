@@ -12,15 +12,7 @@ from flask_session import Session
 from googleapiclient.discovery import build
 
 app = Flask(__name__)
-app.secret_key = os.getenv('FLASK_SECRET_KEY')
-
-app.config['SESSION_TYPE'] = 'filesystem'  # Use 'redis' for scalability
-app.config['SESSION_FILE_DIR'] = './flask_session/'
-app.config['SESSION_PERMANENT'] = False
-app.config['SESSION_USE_SIGNER'] = True
-app.config['SESSION_KEY_PREFIX'] = 'session:'
-
-Session(app)
+app.secret_key = os.getenv('FLASK_SECRET_KEY')  # Secure key for signing cookies
 
 export_states = {}
 YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
@@ -63,9 +55,7 @@ def get_video_name(url):
         try:
             video_id_match = re.search(r'v=([^&]+)', url)
             if not video_id_match:
-                # Handle shortened URLs (e.g., youtu.be/VIDEO_ID)
                 video_id_match = re.search(r'youtu.be/([^?&]+)', url)
-            
             if video_id_match:
                 video_id = video_id_match.group(1)
                 return get_video_info(video_id)
@@ -94,24 +84,15 @@ async def download_thumbnail(url: str, folder_path: str, session: aiohttp.Client
                 content = await response.read()
                 await file.write(content)
 
-async def async_export(file_path, url_list, name_list, download_thumbnails, url_prefix, progress_id):
-    logging.debug("Starting export to file")
+async def async_export(file_path, url_list, name_list, url_prefix, progress_id):
     try:
         async with aiofiles.open(file_path, mode='w', encoding='utf-8') as file:
-            #async with aiohttp.ClientSession() as session:
-                #if download_thumbnails:
-                    #tasks = [download_thumbnail(url, 'static/thumbnails', session) for url in url_list if "youtube.com" in url]
-                    #await asyncio.gather(*tasks)
-                    #logging.debug(f"Thumbnail download progress: {export_states[progress_id]['export_progress']}%")
-                
             for i, url in enumerate(url_list):
                 prefixed_url = f"{url_prefix}{url}" if url_prefix else url
                 await file.write(f"@{prefixed_url}\n~{name_list[i]}\n\n")
                 export_states[progress_id]['export_progress'] = 100 * (i + 1) / len(url_list)
-                logging.debug(f"Export progress: {export_states[progress_id]['export_progress']}%")
                 await asyncio.sleep(0)
-        
-        logging.debug(f"Export complete. File saved to {file_path}")
+
         export_states[progress_id]['export_progress'] = 100
         export_states[progress_id]['exporting'] = False
         export_states[progress_id]['status'] = 'success'
@@ -126,11 +107,9 @@ async def async_export(file_path, url_list, name_list, download_thumbnails, url_
 
 @app.route('/export', methods=['POST'])
 def export_data():
-    progress_id = str(uuid.uuid4())  # Generate a unique ID for tracking progress
+    progress_id = str(uuid.uuid4())
     data = request.form
     file_name = progress_id
-    folder_path = data.get("folder_path", ".")
-    download_thumbnails = data.get("download_thumbnails") == 'on'
     url_prefix = data.get("prefix", "")
 
     if 'url_list' not in session or 'name_list' not in session:
@@ -142,38 +121,25 @@ def export_data():
     export_states[progress_id] = {
         'exporting': True,
         'export_progress': 0,
-        'file_path': os.path.join(folder_path, f"{file_name}.txt"),
-        'download_thumbnails': download_thumbnails,
+        'file_path': f"/tmp/{file_name}.txt",  # Temporary path
         'url_prefix': url_prefix
     }
-
-    if len(url_list) != len(name_list):
-        export_states[progress_id]['exporting'] = False
-        return jsonify({"message": "Error: lists are not the same length"}), 400
 
     def run_export():
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            file_path = loop.run_until_complete(async_export(
+            loop.run_until_complete(async_export(
                 export_states[progress_id]['file_path'],
                 url_list,
                 name_list,
-                export_states[progress_id]['download_thumbnails'],
                 export_states[progress_id]['url_prefix'],
                 progress_id
             ))
-            export_states[progress_id]['exporting'] = False
-            export_states[progress_id]['file_path'] = file_path
         except Exception as e:
             logging.error(f"Export failed: {e}")
-            export_states[progress_id]['status'] = 'error'
-            export_states[progress_id]['error_message'] = str(e)
-        finally:
-            export_states[progress_id]['exporting'] = False
 
     threading.Thread(target=run_export).start()
-
     return redirect(url_for('results', progress_id=progress_id))
 
 @app.route('/results', methods=['GET'])
@@ -206,12 +172,8 @@ def is_valid_url(url):
 
 @app.route('/')
 def index():
-    if 'url_list' not in session:
-        session['url_list'] = []
-    if 'name_list' not in session:
-        session['name_list'] = []
-    if 'thumbnail_list' not in session:
-        session['thumbnail_list'] = []
+    session.setdefault('url_list', [])
+    session.setdefault('name_list', [])
     return render_template('index.html')
 
 @app.route('/download_thumbnail', methods=['POST'])
