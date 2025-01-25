@@ -19,7 +19,11 @@ YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
 youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
 
 def setup_logging():
-    logging.basicConfig(filename='app.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(
+        stream=sys.stdout,  # Log to standard output
+        level=logging.DEBUG,  # Change this to INFO or WARNING in production
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
 
 setup_logging()
 
