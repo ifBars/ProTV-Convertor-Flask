@@ -15,6 +15,8 @@ from io import BytesIO
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY')  # Secure key for signing cookies
+app.config['SESSION_TYPE'] = 'filesystem'
+Session(app)
 
 export_states = {}
 YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')

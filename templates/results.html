@@ -64,7 +64,7 @@
         <div id="progress-container">
             <div id="progress-bar">0%</div>
         </div>
-        <button id="download-button" onclick="window.location.href='{{ url_for('download_file', filename=progress_id ~ ".txt") }}'">Download File</button>
+        <button id="download-button" onclick="window.location.href='{{ url_for('download_file', progress_id=progress_id) }}'">Download File</button>
         <a href="{{ url_for('index') }}">Go Back</a>
     </main>
     <footer>
