@@ -13,12 +13,30 @@ from googleapiclient.discovery import build
 from io import BytesIO
 
 app = Flask(__name__)
-app.secret_key = os.getenv('FLASK_SECRET_KEY')  # Secure key for signing cookies
+app.secret_key = os.getenv('FLASK_SECRET_KEY') or 'dev-secret-key-change-in-production'
 # Using Flask's built-in session (signed cookies) for Vercel compatibility
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+# Increase session cookie size limit warning (default is 4KB)
+app.config['PERMANENT_SESSION_LIFETIME'] = 1800  # 30 minutes
 
 export_states = {}
 YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
-youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
+
+# Initialize YouTube API client lazily to handle missing API key gracefully
+youtube = None
+def get_youtube_client():
+    global youtube
+    if youtube is None:
+        if not YOUTUBE_API_KEY:
+            raise ValueError("YOUTUBE_API_KEY environment variable is not set")
+        try:
+            youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
+        except Exception as e:
+            logging.error(f"Failed to initialize YouTube API client: {e}")
+            raise
+    return youtube
 
 def setup_logging():
     logging.basicConfig(
@@ -31,7 +49,8 @@ setup_logging()
 
 def get_video_info(video_id):
     try:
-        request = youtube.videos().list(part='snippet', id=video_id)
+        youtube_client = get_youtube_client()
+        request = youtube_client.videos().list(part='snippet', id=video_id)
         response = request.execute()
         if response['items']:
             return response['items'][0]['snippet']['title']
@@ -213,16 +232,21 @@ def load_playlist():
     playlist_id = get_playlist_id(playlist_url)
 
     if not playlist_id:
-        flash("Invalid playlist URL")
-        return jsonify({"message": "Invalid playlist URL"}), 400
+        return jsonify({"message": "Invalid playlist URL", "success": False}), 400
+
+    try:
+        youtube_client = get_youtube_client()
+    except Exception as api_init_error:
+        error_msg = f"YouTube API initialization failed: {str(api_init_error)}"
+        logging.error(error_msg)
+        return jsonify({"message": error_msg, "success": False, "error": error_msg}), 500
 
     try:
         url_list = session.get('url_list', [])
         name_list = session.get('name_list', [])
-        #thumbnail_list = session.get('thumbnail_list', [])
         initial_count = len(url_list)
             
-        playlist_request = youtube.playlistItems().list(
+        playlist_request = youtube_client.playlistItems().list(
             part='snippet',
             playlistId=playlist_id,
             maxResults=100
@@ -230,32 +254,51 @@ def load_playlist():
 
         while playlist_request is not None:
             response = playlist_request.execute()
+            
+            # Check if response has items
+            if 'items' not in response:
+                break
+                
             for item in response['items']:
                 video_id = item['snippet']['resourceId']['videoId']
                 video_url = f"https://www.youtube.com/watch?v={video_id}"
                 video_title = item['snippet']['title']
-                #thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
 
                 url_list.append(video_url)
                 name_list.append(video_title)
-                #thumbnail_list.append(thumbnail_url)
 
-            playlist_request = youtube.playlistItems().list(
+            playlist_request = youtube_client.playlistItems().list(
                 part='snippet',
                 playlistId=playlist_id,
                 maxResults=100,
                 pageToken=response.get('nextPageToken')
             ) if response.get('nextPageToken') else None
 
-        session['url_list'] = url_list
-        session['name_list'] = name_list
-        #session['thumbnail_list'] = thumbnail_list
-        new_count = len(url_list) - initial_count
+        # Try to save to session, but handle cookie size limit
+        try:
+            session['url_list'] = url_list
+            session['name_list'] = name_list
+        except Exception as session_error:
+            logging.error(f"Session save error (possibly cookie too large): {session_error}")
+            # Return error if session can't be saved
+            return jsonify({
+                "message": f"Playlist too large for session storage. Loaded {len(url_list) - initial_count} videos but couldn't save.",
+                "success": False,
+                "error": str(session_error)
+            }), 500
 
+        new_count = len(url_list) - initial_count
         return jsonify({"message": f"Loaded {new_count} videos from playlist", "success": True})
     except Exception as e:
-        logging.error(f"Error loading playlist: {e}")
-        return jsonify({"message": "Error loading playlist", "success": False}), 500
+        error_msg = str(e)
+        logging.error(f"Error loading playlist: {error_msg}")
+        import traceback
+        logging.error(traceback.format_exc())
+        return jsonify({
+            "message": f"Error loading playlist: {error_msg}",
+            "success": False,
+            "error": error_msg
+        }), 500
 
 @app.route('/load_urls', methods=['POST'])
 def load_urls():
