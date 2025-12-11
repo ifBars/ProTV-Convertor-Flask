@@ -1,5 +1,4 @@
 Flask
-Flask-Session
 google-api-python-client
 aiofiles
 Werkzeug
